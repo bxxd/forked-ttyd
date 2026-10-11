@@ -534,6 +534,31 @@ export class Xterm {
         return prefs;
     }
 
+    // When embedded as an iframe (alpha-server panels), the viewer can't edit our URL.
+    // Accept known options from the embedding page's query instead, e.g.
+    // https://dev.idio.sh/?rendererType=dom — unknown keys are ignored.
+    @bind
+    private parseOptsFromParentQuery(): Preferences {
+        let query = '';
+        try {
+            if (window.parent === window) return {} as Preferences;
+            query = window.parent.location.search;
+        } catch {
+            return {} as Preferences; // cross-origin parent
+        }
+        const { terminal } = this;
+        const { clientOptions } = this.options;
+        const known = new URLSearchParams();
+        for (const [k, v] of new URLSearchParams(query)) {
+            if (k !== 'session' && k !== 'token' && (k in clientOptions || terminal.options[k] !== undefined)) {
+                known.append(k, v);
+            }
+        }
+        const prefs = this.parseOptsFromUrlQuery(known.toString());
+        if (Object.keys(prefs).length > 0) console.log('[ttyd] options from parent URL:', prefs);
+        return prefs;
+    }
+
     @bind
     private onSocketData(event: MessageEvent) {
         const { textDecoder } = this;
@@ -553,6 +578,7 @@ export class Xterm {
                 this.applyPreferences({
                     ...this.options.clientOptions,
                     ...JSON.parse(textDecoder.decode(data)),
+                    ...this.parseOptsFromParentQuery(),
                     ...this.parseOptsFromUrlQuery(window.location.search),
                 } as Preferences);
                 break;
@@ -703,7 +729,7 @@ export class Xterm {
                     this.webglAddon?.dispose();
                 });
                 terminal.loadAddon(this.webglAddon);
-                console.log('[ttyd] WebGL renderer loaded');
+                console.log('[ttyd] WebGL renderer loaded, GPU:', webglGpuString());
             } catch (e) {
                 console.log('[ttyd] WebGL renderer could not be loaded, falling back to canvas renderer', e);
                 disposeWebglRenderer();
@@ -726,5 +752,15 @@ export class Xterm {
             default:
                 break;
         }
+    }
+}
+
+function webglGpuString(): string {
+    try {
+        const gl = document.createElement('canvas').getContext('webgl2');
+        const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+        return ext ? String(gl?.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : 'unknown';
+    } catch {
+        return 'unknown';
     }
 }
