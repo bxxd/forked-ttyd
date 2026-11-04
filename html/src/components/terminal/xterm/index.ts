@@ -304,6 +304,14 @@ export class Xterm {
         // captures a transient width — the auth msg reports wrong cols/rows,
         // ttyd spawns the PTY at the wrong size, and Claude Code's banner gets
         // squished/garbled when the layout finally lands.
+        // @font-face fonts only load once something asks for them, so fonts.ready alone
+        // won't wait for the bundled ones. xterm measures its cell size when the ttyd
+        // options arrive (in reply to the auth msg), so load them before sending it.
+        await Promise.all(
+            ['16px "DejaVu Sans Mono"', 'bold 16px "DejaVu Sans Mono"'].map(font =>
+                document.fonts?.load(font).catch(() => [])
+            )
+        );
         const fontsReady = document.fonts?.ready ?? Promise.resolve();
         await fontsReady;
 

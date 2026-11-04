@@ -29,6 +29,10 @@ const baseConfig = {
                 test: /\.s?[ac]ss$/,
                 use: [devMode ? 'style-loader' : MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader'],
             },
+            {
+                test: /\.woff2$/,
+                type: 'asset/inline',
+            },
         ],
     },
     resolve: {
