@@ -53,6 +53,12 @@ cp html/dist/inline.html /home/ubuntu/idio/dev/alpha-server/static/alpha/ttyd.ht
 
 ## Key Implementation Details
 
+### Bundled Terminal Font
+
+`html/src/fonts/` holds DejaVu Sans Mono (regular + bold, WOFF2, license alongside). `html/src/style/index.scss` declares it with `@font-face` and webpack inlines it, so `inline.html` is self-contained and the browser always uses this copy over any installed one. alpha-server selects it with `-t fontFamily=DejaVu Sans Mono,monospace`. `onSocketOpen` loads both weights before sending the auth msg, because xterm measures its cell size when the options in the reply arrive.
+
+Symbols the font lacks (e.g. U+23F5, U+23FA, U+23BF) still come from the viewer's fonts, drawn inside the same cell.
+
 ### Mobile Input Architecture
 
 The mobile input system works around xterm.js's problematic mobile IME handling.
